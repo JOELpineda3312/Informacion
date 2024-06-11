@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Información del Empleado</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #72EDF2 10%, #5151E5 100%);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            color: #333;
+            overflow-x: hidden;
+            position: relative;
+        }
+        .card {
+            background: #f3f3f3;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            width: 90%;
+            max-width: 600px;
+            text-align: center;
+            transition: transform 0.3s ease;
+            margin: 20px auto;
+        }
+        .card:hover {
+            transform: translateY(-10px);
+        }
+        .card img {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            margin-top: 20px;
+            object-fit: cover;
+            transition: transform 1s ease;
+            border: 5px solid #fff;
+        }
+        .card img:hover {
+            transform: scale(1.1);
+        }
+        .card-body {
+            padding: 20px;
+        }
+        .card-body h2 {
+            margin: 10px 0;
+            font-size: 1.8em;
+            color: #5151E5;
+        }
+        .card-body .info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+            text-align: left;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .card-body .info:last-child {
+            border-bottom: none;
+        }
+        .card-body .info strong {
+            min-width: 150px;
+            color: #5151E5;
+        }
+        .card-body .info span {
+            flex: 1;
+            color: #333;
+            text-align: right;
+            padding-left: 20px;
+        }
+        .card-body .info a {
+            color: #1a73e8;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        .card-body .info a:hover {
+            color: #0056b3;
+        }
+        @media (max-width: 600px) {
+            .card {
+                width: calc(100% - 40px);
+                margin: 10px;
+            }
+            .card img {
+                width: 120px;
+                height: 120px;
+            }
+            .card-body .info {
+                flex-direction: column;
+                text-align: left;
+                padding: 5px;
+            }
+            .card-body .info strong {
+                min-width: auto;
+                margin-bottom: 5px;
+            }
+            .card-body .info span {
+                text-align: left;
+            }
+        }
+        .snowflake {
+            position: absolute;
+            top: -10px;
+            background-color: #fff;
+            border-radius: 50%;
+            opacity: 0.9;
+            pointer-events: none;
+            animation: fall linear infinite;
+        }
+        @keyframes fall {
+            to {
+                transform: translateY(100vh);
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <img src="https://scontent-bog2-2.xx.fbcdn.net/v/t39.30808-1/412380344_1400546774200704_2423590953931892783_n.jpg?stp=dst-jpg_p200x200&_nc_cat=101&ccb=1-7&_nc_sid=5f2048&_nc_eui2=AeGOxoU5wYKICUp8xXqGsFcNUbc4inMF5vtRtziKcwXm-6DsK21_uqjXWxOmRaBDAIju0O04SfjxGQEcVqNA4deR&_nc_ohc=el0sP67m6bwQ7kNvgHDXHcw&_nc_ht=scontent-bog2-2.xx&oh=00_AYAXC-LULDmejavX3-OLTlJSXD_C-Nf4n8pVP9xSHcoOOw&oe=666E501C" alt="Employee Photo">
+    <div class="card-body">
+        <h2>Joel Steven Pineda Rincon</h2>
+        <div class="info"><strong>Cargo en el Proyecto:</strong> <span>Asegurador de Calidad</span></div>
+        <div class="info"><strong>Area:</strong> <span>Administrativa</span></div>
+        <div class="info"><strong>Nombres:</strong> <span>Joel Steven</span></div>
+        <div class="info"><strong>Apellidos:</strong> <span>Pineda Rincon</span></div>
+        <div class="info"><strong>Tipo de Documento:</strong> <span>C.C</span></div>
+        <div class="info"><strong>Numero de Documento:</strong> <span>1192757557</span></div>
+        <div class="info"><strong>Fecha de Expedición:</strong> <span>23/07/2021</span></div>
+        <div class="info"><strong>Edad:</strong> <span id="age">20 Años</span></div>
+        <div class="info"><strong>Fecha de nacimiento:</strong> <span id="birthdate">20/07/2003</span></div>
+        <div class="info"><strong>Estado Civil:</strong> <span>Soltero</span></div>
+        <div class="info"><strong>Hijos:</strong> <span>No</span></div>
+        <div class="info"><strong>Teléfono:</strong> <span><a href="https://wa.me/qr/CU6LVE57E2WMO1">3133118664</a></span></div>
+        <div class="info"><strong>Correo Electrónico:</strong> <span><a href="mailto:joelstevenpinedarincon20@gmail.com">joelstevenpinedarincon20@gmail.com</a></span></div>
+        <div class="info"><strong>País de nacimiento:</strong> <span>Colombia</span></div>
+        <div class="info"><strong>Ciudad de nacimiento:</strong> <span>Cucuta</span></div>
+        <div class="info"><strong>Tipo de sangre:</strong> <span>A+</span></div>
+        <div class="info"><strong>Dirección de residencia:</strong> <span>Av 10 k22 - 43 Cerro Norte</span></div>
+        <div class="info"><strong>Con quienes vive:</strong> <span>Papas y Hermano</span></div>
+        <div class="info"><strong>A que EPS pertenece:</strong> <span>Coosalud</span></div>
+        <div class="info"><strong>Servicio en la Iglesia:</strong> <span>Alabanza</span></div>
+        <div class="info"><strong>Grupo etario a cargo:</strong> <span>Ninguno</span></div>
+        <div class="info"><strong>Niños a cargo:</strong> <span>0</span></div>
+        <div class="info"><strong>Red Social:</strong> <span><a href="https://www.facebook.com/profile.php?id=100027361853507&locale=es_LA">Facebook</a></span></div>
+    </div>
+</div>
+
+<script>
+    function calculateAge(birthdate) {
+        const now = new Date();
+        const birthDate = new Date(birthdate);
+        let ageYears = now.getFullYear() - birthDate.getFullYear();
+        let ageMonths = now.getMonth() - birthDate.getMonth();
+
+        if (ageMonths < 0 || (ageMonths === 0 && now.getDate() < birthDate.getDate())) {
+            ageYears--;
+            ageMonths += 12;
+        }
+
+        if (now.getDate() < birthDate.getDate()) {
+            ageMonths--;
+        }
+
+        return `${ageYears} años y ${ageMonths} meses`;
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const birthdateElem = document.getElementById("birthdate");
+        const ageElem = document.getElementById("age");
+        const birthdate = birthdateElem.textContent.trim().split('/').reverse().join('-');
+        ageElem.textContent = calculateAge(birthdate);
+    });
+
+    // Crear y animar los copos de nieve
+    function createSnowflake() {
+        const snowflake = document.createElement('div');
+        snowflake.className = 'snowflake';
+        snowflake.style.left = Math.random() * window.innerWidth + 'px';
+        snowflake.style.width = snowflake.style.height = Math.random() * 10 + 10 + 'px';
+        snowflake.style.animationDuration = Math.random() * 3 + 2 + 's';
+        snowflake.style.animationDelay = Math.random() * 5 + 's';
+        document.body.appendChild(snowflake);
+
+        // Eliminar el copo de nieve después de que se haya animado fuera de la pantalla
+        setTimeout(() => {
+            snowflake.remove();
+        }, 5000);
+    }
+
+    // Crear múltiples copos de nieve
+    setInterval(createSnowflake, 200);
+</script>
+
+</body>
+</html>
