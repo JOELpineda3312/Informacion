@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Reconocimiento Profesional</title>
+    <title>Sistema de Asistencia Inteligente</title>
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <style>
         :root {
             --primary: #2196F3;
-            --background: #121212;
-            --surface: #1E1E1E;
+            --background: #1A1A1A;
+            --surface: #2D2D2D;
+            --error: #CF6679;
         }
 
         body {
@@ -17,157 +18,294 @@
             padding: 20px;
             background: var(--background);
             color: white;
-            font-family: Arial, sans-serif;
+            font-family: 'Roboto', sans-serif;
+            min-height: 100vh;
         }
 
-        .camera-container {
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .camera-panel {
             position: relative;
+            width: 100%;
             max-width: 800px;
-            margin: 20px auto;
+            margin: 2rem auto;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
         }
 
-        #video {
+        #videoElement {
             width: 100%;
             height: 600px;
-            background: black;
-            border-radius: 8px;
+            object-fit: cover;
+            transform: scaleX(-1);
+            background: #000;
         }
 
-        #canvas {
+        .overlay-canvas {
             position: absolute;
             top: 0;
             left: 0;
             pointer-events: none;
         }
 
+        .control-bar {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 100;
+        }
+
+        .control-btn {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid var(--primary);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-btn:hover {
+            background: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .registros-table {
+            background: var(--surface);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 2rem;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
-            background: var(--surface);
-            border-radius: 8px;
         }
 
         th, td {
-            padding: 12px;
+            padding: 16px;
             text-align: left;
             border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        th {
+            background: rgba(255,255,255,0.05);
+            font-weight: 500;
+        }
+
+        .status-bar {
+            padding: 16px;
+            text-align: center;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            margin: 1rem 0;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="camera-container">
-            <video id="video" autoplay playsinline></video>
-            <canvas id="canvas"></canvas>
-        </div>
+        <h1 style="text-align: center; margin-bottom: 2rem;">Sistema de Reconocimiento Facial</h1>
         
-        <table>
-            <thead>
-                <tr>
-                    <th>Nombre</th>
-                    <th>Fecha</th>
-                    <th>Hora</th>
-                </tr>
-            </thead>
-            <tbody id="registros"></tbody>
-        </table>
+        <div class="camera-panel">
+            <video id="videoElement" autoplay playsinline></video>
+            <canvas class="overlay-canvas" id="overlay"></canvas>
+            <div class="control-bar">
+                <button class="control-btn" id="switchCameraBtn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M4 4h3l2-2h6l2 2h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2m12 3.5a1.5 1.5 0 0 1-1.5 1.5 1.5 1.5 0 0 1-1.5-1.5 1.5 1.5 0 0 1 1.5-1.5 1.5 1.5 0 0 1 1.5 1.5z"/>
+                    </svg>
+                    Cambiar Cámara
+                </button>
+            </div>
+        </div>
+
+        <div class="registros-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Fecha</th>
+                        <th>Hora</th>
+                    </tr>
+                </thead>
+                <tbody id="registrosBody"></tbody>
+            </table>
+        </div>
+
+        <div class="status-bar" id="status">Inicializando sistema...</div>
     </div>
 
     <script>
-        // 1. Configuración inicial
-        const MODELOS_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/';
-        let registros = JSON.parse(localStorage.getItem('asistencia') || [];
-        let rostrosConocidos = [];
+        // Configuración del sistema
+        const MODEL_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/';
+        let currentStream = null;
+        let isFrontCamera = true;
+        let registros = JSON.parse(localStorage.getItem('asistencia')) || [];
+        let faceMatcher = null;
 
-        // 2. Cargar modelos faciales
-        async function inicializarSistema() {
-            await cargarModelos();
-            await cargarRostrosConocidos();
-            await iniciarCamara();
-            iniciarDeteccion();
-        }
-
-        async function cargarModelos() {
-            await faceapi.nets.tinyFaceDetector.loadFromUri(MODELOS_URL);
-            await faceapi.nets.faceLandmark68Net.loadFromUri(MODELOS_URL);
-            await faceapi.nets.faceRecognitionNet.loadFromUri(MODELOS_URL);
-        }
-
-        // 3. Cargar tus imágenes de referencia (BASE64)
-        const imagenes = {
-            "Barack Obama": "data:image/jpeg;base64,/9j/4AAQSk...",
-            "Joe Biden": "data:image/png;base64,iVBORw0KGg..."
+        // Rostros conocidos (Agregar imágenes en base64)
+        const knownFaces = {
+            "Ejemplo 1": "data:image/jpeg;base64,/9j/4AAQSkZJRg...",
+            "Ejemplo 2": "data:image/png;base64,iVBORw0KGg..."
         };
 
-        async function cargarRostrosConocidos() {
-            for (const [nombre, base64] of Object.entries(imagenes)) {
-                const img = await cargarImagen(base64);
-                const deteccion = await faceapi.detectSingleFace(img)
+        // 1. Inicialización del sistema
+        async function initializeSystem() {
+            try {
+                await loadFaceModels();
+                await loadKnownFaces();
+                await startCamera();
+                setupRealTimeDetection();
+                updateRegistryTable();
+            } catch (error) {
+                updateStatus(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        // 2. Cargar modelos de IA
+        async function loadFaceModels() {
+            updateStatus('Cargando modelos de reconocimiento...');
+            await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+            await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+            await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+        }
+
+        // 3. Cargar rostros de referencia
+        async function loadKnownFaces() {
+            updateStatus('Cargando base de datos...');
+            const labeledDescriptors = [];
+            
+            for (const [name, base64] of Object.entries(knownFaces)) {
+                const img = await loadBase64Image(base64);
+                const detection = await faceapi.detectSingleFace(img)
                     .withFaceLandmarks()
                     .withFaceDescriptor();
                 
-                if (deteccion) {
-                    rostrosConocidos.push({
-                        nombre: nombre,
-                        descriptor: deteccion.descriptor
-                    });
+                if (detection) {
+                    labeledDescriptors.push(
+                        new faceapi.LabeledFaceDescriptors(name, [detection.descriptor])
+                    );
                 }
             }
-        }
-
-        // 4. Lógica de la cámara
-        async function iniciarCamara() {
-            const video = document.getElementById('video');
-            const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
-            video.srcObject = stream;
-        }
-
-        // 5. Procesamiento en tiempo real
-        function iniciarDeteccion() {
-            const video = document.getElementById('video');
-            const canvas = document.getElementById('canvas');
             
-            setInterval(async () => {
-                const detecciones = await faceapi.detectAllFaces(video, 
-                    new faceapi.TinyFaceDetectorOptions())
-                    .withFaceLandmarks()
-                    .withFaceDescriptors();
+            faceMatcher = new faceapi.FaceMatcher(labeledDescriptors);
+        }
 
-                detecciones.forEach(deteccion => {
-                    const mejorCoincidencia = encontrarCoincidencia(deteccion.descriptor);
-                    
-                    if (mejorCoincidencia.distancia < 0.5) {
-                        registrarAsistencia(mejorCoincidencia.nombre);
-                        dibujarResultado(canvas, deteccion, mejorCoincidencia.nombre);
+        // 4. Control de cámara
+        async function startCamera() {
+            try {
+                if (currentStream) currentStream.getTracks().forEach(track => track.stop());
+                
+                const constraints = {
+                    video: {
+                        facingMode: isFrontCamera ? 'user' : 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
                     }
-                });
-            }, 1000);
-        }
+                };
 
-        // 6. Funciones auxiliares
-        function encontrarCoincidencia(descriptor) {
-            return rostrosConocidos.reduce((mejor, actual) => {
-                const distancia = faceapi.euclideanDistance(descriptor, actual.descriptor);
-                return distancia < mejor.distancia ? { nombre: actual.nombre, distancia } : mejor;
-            }, { distancia: Infinity });
-        }
-
-        function registrarAsistencia(nombre) {
-            const hoy = new Date().toLocaleDateString();
-            if (!registros.some(reg => reg.nombre === nombre && reg.fecha === hoy)) {
-                registros.push({
-                    nombre: nombre,
-                    fecha: hoy,
-                    hora: new Date().toLocaleTimeString()
+                currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+                const video = document.getElementById('videoElement');
+                video.srcObject = currentStream;
+                
+                return new Promise(resolve => {
+                    video.onloadedmetadata = () => resolve();
                 });
-                localStorage.setItem('asistencia', JSON.stringify(registros));
-                actualizarTabla();
+            } catch (error) {
+                throw new Error(`Acceso a cámara denegado: ${error.message}`);
             }
         }
 
-        function actualizarTabla() {
-            document.getElementById('registros').innerHTML = registros
+        // 5. Detección en tiempo real
+        function setupRealTimeDetection() {
+            const video = document.getElementById('videoElement');
+            const canvas = document.getElementById('overlay');
+            
+            video.addEventListener('play', () => {
+                const displaySize = { width: video.videoWidth, height: video.videoHeight };
+                faceapi.matchDimensions(canvas, displaySize);
+
+                setInterval(async () => {
+                    if (!faceMatcher) return;
+
+                    const detections = await faceapi.detectAllFaces(video, 
+                        new faceapi.TinyFaceDetectorOptions())
+                        .withFaceLandmarks()
+                        .withFaceDescriptors();
+
+                    const resizedDetections = faceapi.resizeResults(detections, displaySize);
+                    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+                    
+                    resizedDetections.forEach(detection => {
+                        const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
+                        
+                        if (bestMatch.distance < 0.5) {
+                            drawDetectionBox(canvas, detection, bestMatch.label);
+                            registerAttendance(bestMatch.label);
+                        }
+                    });
+                }, 100);
+            });
+        }
+
+        // 6. Registro de asistencia
+        function registerAttendance(name) {
+            const today = new Date().toISOString().split('T')[0];
+            const exists = registros.some(reg => reg.nombre === name && reg.fecha === today);
+
+            if (!exists) {
+                registros.push({
+                    nombre: name,
+                    fecha: today,
+                    hora: new Date().toLocaleTimeString(),
+                    timestamp: Date.now()
+                });
+                
+                localStorage.setItem('asistencia', JSON.stringify(registros));
+                updateRegistryTable();
+                updateStatus(`Asistencia registrada: ${name}`, 'success');
+            }
+        }
+
+        // 7. Funciones auxiliares
+        function loadBase64Image(base64) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.src = base64;
+                img.onload = () => resolve(img);
+            });
+        }
+
+        function drawDetectionBox(canvas, detection, label) {
+            const ctx = canvas.getContext('2d');
+            const { x, y, width, height } = detection.detection.box;
+            
+            // Dibujar caja
+            ctx.strokeStyle = '#FF0000';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x, y, width, height);
+            
+            // Dibujar etiqueta
+            ctx.fillStyle = '#FF0000';
+            ctx.font = '16px Roboto';
+            ctx.fillText(label, x, y > 20 ? y - 5 : 20);
+        }
+
+        function updateRegistryTable() {
+            const tbody = document.getElementById('registrosBody');
+            tbody.innerHTML = registros
+                .sort((a, b) => b.timestamp - a.timestamp)
                 .map(reg => `
                     <tr>
                         <td>${reg.nombre}</td>
@@ -177,23 +315,23 @@
                 `).join('');
         }
 
-        function dibujarResultado(canvas, deteccion, nombre) {
-            const ctx = canvas.getContext('2d');
-            const { x, y, width, height } = deteccion.detection.box;
-            
-            // Dibujar rectángulo
-            ctx.strokeStyle = '#FF0000';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(x, y, width, height);
-            
-            // Dibujar texto
-            ctx.fillStyle = '#FF0000';
-            ctx.font = '16px Arial';
-            ctx.fillText(nombre, x, y - 5);
+        function updateStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.style.color = type === 'error' ? 'var(--error)' : 'white';
+            status.style.backgroundColor = type === 'error' ? 'rgba(207,102,121,0.1)' : 'transparent';
         }
 
-        // Iniciar sistema
-        inicializarSistema();
+        // Event Listeners
+        document.getElementById('switchCameraBtn').addEventListener('click', async () => {
+            isFrontCamera = !isFrontCamera;
+            updateStatus('Cambiando cámara...');
+            await startCamera();
+            updateStatus('Cámara lista');
+        });
+
+        // Iniciar aplicación
+        initializeSystem();
     </script>
 </body>
 </html>
