@@ -2,46 +2,33 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sistema de Asistencia Facial</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Asistencia Facial 3.0</title>
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
     <style>
         :root {
-            --primary: #2196F3;
+            --primary: #4CAF50;
             --background: #1A1A1A;
             --surface: #2D2D2D;
             --text: #FFFFFF;
-            --success: #4CAF50;
-            --error: #F44336;
-        }
-
-        * {
-            box-sizing: border-box;
+            --error: #FF5252;
         }
 
         body {
             margin: 0;
             padding: 20px;
+            font-family: Arial, sans-serif;
             background: var(--background);
             color: var(--text);
-            font-family: 'Arial', sans-serif;
-            min-height: 100vh;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .camera-wrapper {
-            position: relative;
-            width: 100%;
+        .camera-container {
             max-width: 800px;
             margin: 2rem auto;
             border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+            position: relative;
             aspect-ratio: 4/3;
         }
 
@@ -50,13 +37,6 @@
             height: 100%;
             object-fit: cover;
             transform: scaleX(-1);
-        }
-
-        #canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            pointer-events: none;
         }
 
         .controls {
@@ -82,27 +62,6 @@
 
         .btn:hover {
             background: var(--primary);
-            transform: translateY(-2px);
-        }
-
-        .registros-container {
-            background: var(--surface);
-            border-radius: 12px;
-            padding: 20px;
-            margin: 2rem auto;
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 600px;
-        }
-
-        th, td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
         }
 
         .status {
@@ -112,88 +71,64 @@
             margin: 1rem 0;
             background: rgba(255,255,255,0.05);
         }
-
-        @media (max-width: 768px) {
-            .camera-wrapper {
-                margin: 1rem auto;
-            }
-
-            .btn {
-                padding: 10px 18px;
-                font-size: 14px;
-            }
-        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="camera-wrapper">
+        <div class="camera-container">
             <video id="video" autoplay playsinline></video>
-            <canvas id="canvas"></canvas>
             <div class="controls">
                 <button class="btn" onclick="switchCamera()">Cambiar Cámara</button>
                 <button class="btn" onclick="exportToExcel()">Descargar Excel</button>
             </div>
         </div>
-
-        <div class="registros-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Estudiante</th>
-                        <th>Fecha</th>
-                        <th>Hora</th>
-                    </tr>
-                </thead>
-                <tbody id="registrosBody"></tbody>
-            </table>
-        </div>
-
-        <div id="status" class="status">Inicializando sistema...</div>
+        <div id="status" class="status">🚀 Inicializando sistema...</div>
     </div>
 
     <script>
+        // CONFIGURACIÓN MEJORADA
         const CONFIG = {
             detectionInterval: 1000,
             similarityThreshold: 0.45,
-            cooldownTime: 15000,
             modelsURL: 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/',
             studentImages: [
-                'https://raw.githubusercontent.com/JOELpineda3312/Informacion/610d8044553eadc03f971fd41d42ffa6795717f2/joel.jpg',
-                'https://raw.githubusercontent.com/JOELpineda3312/Informacion/main/Joel%20Pineda.jpg'
+                'https://i.imgur.com/3qG8RnD.jpg'  // Imagen de prueba
             ],
-            detectionOptions: new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })
+            detectionOptions: new faceapi.TinyFaceDetectorOptions({
+                inputSize: 512,
+                scoreThreshold: 0.25
+            })
         };
 
+        // VARIABLES GLOBALES
         let currentStream = null;
-        let isFrontCamera = true;
         let registros = JSON.parse(localStorage.getItem('asistencia')) || [];
         let faceMatcher = null;
-        const lastDetections = new Map();
 
+        // FUNCIONES PRINCIPALES
         async function initialize() {
             try {
                 await loadFaceModels();
                 await loadReferenceFaces();
                 await startCamera();
                 setupFaceDetection();
-                updateStatus('Sistema listo ✅');
+                updateStatus('✅ Sistema listo');
             } catch (error) {
-                updateStatus(`❌ Error: ${error.message}`, 'error');
+                handleError(error);
             }
         }
 
         async function loadFaceModels() {
-            updateStatus(' Cargando modelos de reconocimiento...');
-            await faceapi.nets.ssdMobilenetv1.loadFromUri(CONFIG.modelsURL);
+            updateStatus('⚙️ Cargando IA...');
+            await faceapi.nets.tinyFaceDetector.loadFromUri(CONFIG.modelsURL);
             await faceapi.nets.faceLandmark68Net.loadFromUri(CONFIG.modelsURL);
             await faceapi.nets.faceRecognitionNet.loadFromUri(CONFIG.modelsURL);
         }
 
         async function loadReferenceFaces() {
-            updateStatus(' Cargando base de datos...');
+            updateStatus('📸 Procesando imágenes...');
             const labeledDescriptors = [];
-
+            
             for (const url of CONFIG.studentImages) {
                 try {
                     const img = await loadImage(url);
@@ -201,173 +136,120 @@
                         .withFaceLandmarks()
                         .withFaceDescriptors();
 
-                    if (detections.length === 0) {
-                        console.warn(`⚠️ No se detectaron rostros en: ${url}`);
+                    if (!detections.length) {
+                        alert(`⚠️ Error en imagen:\n${url}\n• Usar foto frontal\n• Buena iluminación`);
                         continue;
                     }
 
-                    const studentName = extractNameFromUrl(url);
-                    detections.forEach(detection => {
-                        labeledDescriptors.push(
-                            new faceapi.LabeledFaceDescriptors(studentName, [detection.descriptor])
-                        );
-                    });
-
+                    const nombre = url.split('/').pop().split('.')[0];
+                    labeledDescriptors.push(new faceapi.LabeledFaceDescriptors(nombre, detections.map(d => d.descriptor)));
+                    
                 } catch (error) {
-                    console.error(`❌ Error con imagen ${url}:`, error);
-                    updateStatus(`⚠️ Problema con: ${extractNameFromUrl(url)}`, 'error');
+                    console.error(`Error con ${url}:`, error);
+                    updateStatus(`❌ Error carga: ${url.split('/').pop()}`, 'error');
                 }
             }
 
-            if (labeledDescriptors.length === 0) {
-                throw new Error('No se encontraron rostros válidos. Verifica las imágenes');
-            }
-
+            if (!labeledDescriptors.length) throw new Error('No se encontraron rostros válidos');
             faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, CONFIG.similarityThreshold);
         }
 
-        function loadImage(url) {
+        async function loadImage(url) {
             return new Promise((resolve, reject) => {
                 const img = new Image();
                 img.crossOrigin = "Anonymous";
-
-                const proxyUrl = 'https://corsproxy.io/?';
-                img.src = proxyUrl + encodeURIComponent(url);
-
+                img.src = url;
+                
                 img.onload = () => resolve(img);
                 img.onerror = () => reject(new Error('Error cargando imagen'));
             });
-            function extractNameFromUrl(url) {
-            const fileName = url.split('/').pop().split('?')[0];
-            return decodeURIComponent(fileName)
-                .split('.')[0]
-                .replace(/_/g, ' ')
-                .trim();
         }
 
         async function startCamera() {
             if (currentStream) currentStream.getTracks().forEach(track => track.stop());
-
-            const constraints = {
-                video: {
-                    facingMode: { exact: isFrontCamera ? 'user' : 'environment' },
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
-                }
-            };
-
+            
             try {
-                currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+                currentStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        facingMode: 'environment'
+                    }
+                });
                 document.getElementById('video').srcObject = currentStream;
             } catch (error) {
-                throw new Error(`Error de cámara: ${error.message}`);
+                throw new Error('Permiso de cámara denegado. Actualice la página y permita el acceso');
             }
         }
 
         function setupFaceDetection() {
             const video = document.getElementById('video');
-            const canvas = document.getElementById('canvas');
+            const canvas = faceapi.createCanvasFromMedia(video);
+            document.body.append(canvas);
+            faceapi.matchDimensions(canvas, video);
 
             video.addEventListener('play', () => {
-                const displaySize = { width: video.videoWidth, height: video.videoHeight };
-                faceapi.matchDimensions(canvas, displaySize);
-
                 setInterval(async () => {
                     const detections = await faceapi.detectAllFaces(video, CONFIG.detectionOptions)
-                        .withFaceLandmarks()
                         .withFaceDescriptors();
 
-                    const resizedDetections = faceapi.resizeResults(detections, displaySize);
+                    const resized = faceapi.resizeResults(detections, video);
                     canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
 
-                    resizedDetections.forEach(detection => {
-                        const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
-
-                        if (bestMatch.distance < CONFIG.similarityThreshold) {
-                            drawDetectionBox(canvas, detection, bestMatch.label);
-                            registerAttendance(bestMatch.label);
+                    resized.forEach(detection => {
+                        const match = faceMatcher.findBestMatch(detection.descriptor);
+                        if (match.distance < CONFIG.similarityThreshold) {
+                            registerAttendance(match.label);
                         }
                     });
                 }, CONFIG.detectionInterval);
             });
         }
 
-        function drawDetectionBox(canvas, detection, label) {
-            const ctx = canvas.getContext('2d');
-            const { x, y, width, height } = detection.detection.box;
-
-            ctx.strokeStyle = '#00FF00';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(x, y, width, height);
-
-            ctx.fillStyle = '#00FF00';
-            ctx.font = '14px Arial';
-            ctx.fillText(label, x + 5, y > 20 ? y - 5 : 20);
-        }
-
-        function registerAttendance(name) {
-            const now = Date.now();
-            const today = new Date().toISOString().split('T')[0];
-
-            if (lastDetections.get(name) && (now - lastDetections.get(name)) < CONFIG.cooldownTime) return;
-
-            const exists = registros.some(reg =>
-                reg.nombre === name &&
-                reg.fecha === today &&
-                (now - reg.timestamp) < CONFIG.cooldownTime
-            );
-
-            if (!exists) {
+        function registerAttendance(nombre) {
+            const hoy = new Date().toLocaleDateString('es-PE');
+            if (!registros.some(r => r.nombre === nombre && r.fecha === hoy)) {
                 registros.push({
-                    nombre: name,
-                    fecha: today,
-                    hora: new Date().toLocaleTimeString('es-PE', {
-                        hour: '2-digit',
+                    nombre: nombre,
+                    fecha: hoy,
+                    hora: new Date().toLocaleTimeString('es-PE', { 
+                        hour: '2-digit', 
                         minute: '2-digit'
-                    }),
-                    timestamp: now
+                    })
                 });
-
-                lastDetections.set(name, now);
                 localStorage.setItem('asistencia', JSON.stringify(registros));
-                updateRegistryTable();
-                updateStatus(`✔️ Asistencia registrada: ${name}`, 'success');
+                updateStatus(`✔️ Registrado: ${nombre}`, 'success');
             }
         }
 
-        function updateRegistryTable() {
-            const tbody = document.getElementById('registrosBody');
-            tbody.innerHTML = registros
-                .sort((a, b) => b.timestamp - a.timestamp)
-                .map(reg => `
-                    <tr>
-                        <td>${reg.nombre}</td>
-                        <td>${reg.fecha}</td>
-                        <td>${reg.hora}</td>
-                    </tr>
-                `).join('');
+        // FUNCIONES AUXILIARES
+        function updateStatus(msg, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = msg;
+            status.style.background = type === 'error' ? '#ff000033' : '#00ff0033';
         }
 
-        function updateStatus(message, type = 'info') {
-            const status = document.getElementById('status');
-            status.textContent = message;
-            status.style.background = type === 'error' ? '#ff000033' :
-                type === 'success' ? '#00ff0033' :
-                'rgba(255,255,255,0.05)';
+        function handleError(error) {
+            console.error(error);
+            alert(`ERROR CRÍTICO:\n${error.message}\n\nSolución:\n1. Permitir cámara\n2. Verificar imágenes\n3. Usar HTTPS`);
+            updateStatus(`❌ ${error.message}`, 'error');
         }
 
         function switchCamera() {
-            isFrontCamera = !isFrontCamera;
-            startCamera();
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+                initialize();
+            }
         }
 
         function exportToExcel() {
-            const worksheet = XLSX.utils.json_to_sheet(registros);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Asistencia");
-            XLSX.writeFile(workbook, `Asistencia_${new Date().toISOString().split('T')[0]}.xlsx`);
+            const ws = XLSX.utils.json_to_sheet(registros);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Asistencia");
+            XLSX.writeFile(wb, `Asistencia_${new Date().toISOString().slice(0,10)}.xlsx`);
         }
 
+        // INICIAR SISTEMA
         initialize();
     </script>
 </body>
