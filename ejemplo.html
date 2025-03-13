@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sistema de Asistencia Facial</title>
+    <title>Sistema de Asistencia Facial Profesional</title>
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
     <style>
@@ -18,15 +18,16 @@
 
         * {
             box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
 
         body {
-            margin: 0;
-            padding: 20px;
             background: var(--background);
             color: var(--text);
-            font-family: 'Arial', sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             min-height: 100vh;
+            padding: 20px;
         }
 
         .container {
@@ -34,15 +35,16 @@
             margin: 0 auto;
         }
 
-        .camera-wrapper {
+        .camera-container {
             position: relative;
             width: 100%;
             max-width: 800px;
             margin: 2rem auto;
-            border-radius: 12px;
+            border-radius: 15px;
             overflow: hidden;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.3);
             aspect-ratio: 4/3;
+            background: #000;
         }
 
         #video {
@@ -61,7 +63,7 @@
 
         .controls {
             position: absolute;
-            bottom: 20px;
+            bottom: 25px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
@@ -70,69 +72,85 @@
         }
 
         .btn {
-            background: rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.15);
             border: 2px solid var(--primary);
             color: var(--text);
-            padding: 12px 24px;
-            border-radius: 30px;
+            padding: 12px 28px;
+            border-radius: 35px;
             cursor: pointer;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
             transition: all 0.3s;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .btn:hover {
             background: var(--primary);
-            transform: translateY(-2px);
+            transform: translateY(-3px);
         }
 
         .registros-container {
             background: var(--surface);
-            border-radius: 12px;
-            padding: 20px;
-            margin: 2rem auto;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 2.5rem auto;
             overflow-x: auto;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 600px;
+            min-width: 650px;
         }
 
         th, td {
-            padding: 12px 15px;
+            padding: 14px 18px;
             text-align: left;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(255,255,255,0.12);
         }
 
         .status {
-            padding: 15px;
+            padding: 16px;
             text-align: center;
-            border-radius: 8px;
-            margin: 1rem 0;
-            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            margin: 1.2rem 0;
+            background: rgba(255,255,255,0.08);
+            font-size: 0.95em;
         }
 
         @media (max-width: 768px) {
-            .camera-wrapper {
-                margin: 1rem auto;
+            .camera-container {
+                margin: 1.2rem auto;
+                border-radius: 12px;
             }
             
             .btn {
-                padding: 10px 18px;
+                padding: 10px 20px;
                 font-size: 14px;
+            }
+            
+            .registros-container {
+                padding: 18px;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="camera-wrapper">
+        <div class="camera-container">
             <video id="video" autoplay playsinline></video>
             <canvas id="canvas"></canvas>
             <div class="controls">
-                <button class="btn" onclick="switchCamera()">Cambiar Cámara</button>
-                <button class="btn" onclick="exportToExcel()">Descargar Excel</button>
+                <button class="btn" onclick="switchCamera()">
+                    <span>🔄</span>
+                    Cambiar Cámara
+                </button>
+                <button class="btn" onclick="exportToExcel()">
+                    <span>📥</span>
+                    Descargar Excel
+                </button>
             </div>
         </div>
 
@@ -149,68 +167,77 @@
             </table>
         </div>
 
-        <div id="status" class="status">Inicializando sistema...</div>
+        <div id="status" class="status">🚀 Inicializando sistema...</div>
     </div>
 
     <script>
-        // Configuración principal
+        // CONFIGURACIÓN AVANZADA
         const CONFIG = {
             detectionInterval: 1000,
-            similarityThreshold: 0.45,
+            similarityThreshold: 0.38,
             cooldownTime: 15000,
             modelsURL: 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/',
             studentImages: [
-                'https://raw.githubusercontent.com/JOELpineda3312/Informacion/610d8044553eadc03f971fd41d42ffa6795717f2/joel.jpg',
                 'https://raw.githubusercontent.com/JOELpineda3312/Informacion/main/Joel%20Pineda.jpg'
             ],
             detectionOptions: new faceapi.TinyFaceDetectorOptions({
-                inputSize: 512,
-                scoreThreshold: 0.3
-            })
+                inputSize: 1024,
+                scoreThreshold: 0.15
+            }),
+            maxImageSize: 2500,
+            corsProxy: 'https://api.allorigins.win/raw?url='
         };
 
-        // Variables globales
+        // VARIABLES GLOBALES
         let currentStream = null;
         let isFrontCamera = true;
         let registros = JSON.parse(localStorage.getItem('asistencia')) || [];
         let faceMatcher = null;
         const lastDetections = new Map();
 
-        // Inicialización del sistema
+        // FUNCIONES PRINCIPALES
         async function initialize() {
             try {
+                await verifyImageAccess();
                 await loadFaceModels();
                 await loadReferenceFaces();
                 await startCamera();
                 setupFaceDetection();
-                updateStatus('Sistema listo ✅');
+                updateStatus('✅ Sistema listo - Rostros registrados: ' + CONFIG.studentImages.length);
             } catch (error) {
-                updateStatus(`❌ Error: ${error.message}`, 'error');
+                handleFatalError(error);
             }
         }
 
-        // Carga de modelos de IA
+        async function verifyImageAccess() {
+            try {
+                const test = await fetch(CONFIG.corsProxy + encodeURIComponent(CONFIG.studentImages[0]));
+                if (!test.ok) throw new Error('Imágenes no accesibles');
+            } catch (error) {
+                throw new Error('Error de conexión. Verifica las URLs');
+            }
+        }
+
         async function loadFaceModels() {
-            updateStatus('🔃 Cargando modelos de reconocimiento...');
+            updateStatus('⚙️ Cargando IA...');
             await faceapi.nets.tinyFaceDetector.loadFromUri(CONFIG.modelsURL);
             await faceapi.nets.faceLandmark68Net.loadFromUri(CONFIG.modelsURL);
             await faceapi.nets.faceRecognitionNet.loadFromUri(CONFIG.modelsURL);
         }
 
-        // Carga de imágenes de referencia
         async function loadReferenceFaces() {
-            updateStatus('🔃 Cargando base de datos...');
+            updateStatus('📸 Procesando imágenes...');
             const labeledDescriptors = [];
             
             for (const url of CONFIG.studentImages) {
                 try {
-                    const img = await loadImage(url);
-                    const detections = await faceapi.detectAllFaces(img, CONFIG.detectionOptions)
+                    const { img, resized } = await processImage(url);
+                    const detections = await faceapi.detectAllFaces(resized, CONFIG.detectionOptions)
                         .withFaceLandmarks()
                         .withFaceDescriptors();
 
                     if (detections.length === 0) {
-                        console.warn(`⚠️ No se detectaron rostros en: ${url}`);
+                        alert(`⚠️ AJUSTE REQUERIDO:\nImagen: ${url}\n• Rostro frontal\n• Buena iluminación`);
                         continue;
                     }
 
@@ -222,51 +249,70 @@
                     });
                     
                 } catch (error) {
-                    console.error(`❌ Error con imagen ${url}:`, error);
-                    updateStatus(`⚠️ Problema con: ${extractNameFromUrl(url)}`, 'error');
+                    console.error('Error crítico:', error);
+                    updateStatus(`❌ Fallo en: ${extractNameFromUrl(url)}`, 'error');
                 }
             }
 
             if (labeledDescriptors.length === 0) {
-                throw new Error('No se encontraron rostros válidos. Verifica las imágenes');
+                throw new Error('No se detectaron rostros válidos. Verifica las imágenes');
             }
             
             faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, CONFIG.similarityThreshold);
         }
 
-        // Función para cargar imágenes con proxy CORS
+        async function processImage(url) {
+            const img = await loadImage(url);
+            const scale = Math.min(1, CONFIG.maxImageSize / Math.max(img.width, img.height));
+            
+            if (scale < 1) {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width * scale;
+                canvas.height = img.height * scale;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                
+                const resizedImg = new Image();
+                resizedImg.src = canvas.toDataURL();
+                await new Promise(resolve => resizedImg.onload = resolve);
+                
+                return { img, resized: resizedImg };
+            }
+            return { img, resized: img };
+        }
+
         function loadImage(url) {
             return new Promise((resolve, reject) => {
                 const img = new Image();
                 img.crossOrigin = "Anonymous";
+                img.src = CONFIG.corsProxy + encodeURIComponent(url);
                 
-                // Usar proxy para evitar CORS
-                const proxyUrl = 'https://corsproxy.io/?';
-                img.src = proxyUrl + encodeURIComponent(url);
+                img.onload = () => {
+                    console.log('Imagen cargada:', url, `(${img.width}x${img.height}px)`);
+                    resolve(img);
+                };
                 
-                img.onload = () => resolve(img);
-                img.onerror = () => reject(new Error('Error cargando imagen'));
+                img.onerror = () => reject(new Error('Error carga de imagen'));
             });
         }
 
-        // Extraer nombre del archivo
         function extractNameFromUrl(url) {
-            const fileName = url.split('/').pop().split('?')[0];
-            return decodeURIComponent(fileName)
-                .split('.')[0]
-                .replace(/_/g, ' ')
+            const filename = url.split('/').pop().split('?')[0];
+            return decodeURIComponent(filename)
+                .replace(/\.[^/.]+$/, '') // Eliminar extensión
+                .replace(/[_-]/g, ' ')    // Reemplazar guiones
                 .trim();
         }
 
-        // Configuración de cámara
         async function startCamera() {
             if (currentStream) currentStream.getTracks().forEach(track => track.stop());
             
             const constraints = {
                 video: {
                     facingMode: { exact: isFrontCamera ? 'user' : 'environment' },
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 }
                 }
             };
 
@@ -274,11 +320,10 @@
                 currentStream = await navigator.mediaDevices.getUserMedia(constraints);
                 document.getElementById('video').srcObject = currentStream;
             } catch (error) {
-                throw new Error(`Error de cámara: ${error.message}`);
+                throw new Error(`Cámara no disponible: ${error.message}`);
             }
         }
 
-        // Detección facial en tiempo real
         function setupFaceDetection() {
             const video = document.getElementById('video');
             const canvas = document.getElementById('canvas');
@@ -307,29 +352,25 @@
             });
         }
 
-        // Dibujar cuadro de detección
         function drawDetectionBox(canvas, detection, label) {
             const ctx = canvas.getContext('2d');
             const { x, y, width, height } = detection.detection.box;
             
-            ctx.strokeStyle = '#00FF00';
+            ctx.strokeStyle = '#00FF88';
             ctx.lineWidth = 2;
             ctx.strokeRect(x, y, width, height);
             
-            ctx.fillStyle = '#00FF00';
-            ctx.font = '14px Arial';
+            ctx.fillStyle = '#00FF88';
+            ctx.font = 'bold 14px Arial';
             ctx.fillText(label, x + 5, y > 20 ? y - 5 : 20);
         }
 
-        // Registrar asistencia
         function registerAttendance(name) {
             const now = Date.now();
             const today = new Date().toISOString().split('T')[0];
             
-            // Verificar cooldown
             if (lastDetections.get(name) && (now - lastDetections.get(name)) < CONFIG.cooldownTime) return;
 
-            // Verificar duplicados
             const exists = registros.some(reg => 
                 reg.nombre === name && 
                 reg.fecha === today &&
@@ -342,7 +383,8 @@
                     fecha: today,
                     hora: new Date().toLocaleTimeString('es-PE', { 
                         hour: '2-digit', 
-                        minute: '2-digit'
+                        minute: '2-digit',
+                        second: '2-digit'
                     }),
                     timestamp: now
                 });
@@ -350,11 +392,10 @@
                 lastDetections.set(name, now);
                 localStorage.setItem('asistencia', JSON.stringify(registros));
                 updateRegistryTable();
-                updateStatus(`✔️ Asistencia registrada: ${name}`, 'success');
+                updateStatus(`✔️ Registrado: ${name}`, 'success');
             }
         }
 
-        // Actualizar tabla de registros
         function updateRegistryTable() {
             const tbody = document.getElementById('registrosBody');
             tbody.innerHTML = registros
@@ -368,30 +409,39 @@
                 `).join('');
         }
 
-        // Actualizar estado del sistema
         function updateStatus(message, type = 'info') {
             const status = document.getElementById('status');
             status.textContent = message;
             status.style.background = type === 'error' ? '#ff000033' : 
                                     type === 'success' ? '#00ff0033' : 
-                                    'rgba(255,255,255,0.05)';
+                                    '#ffffff15';
         }
 
-        // Cambiar cámara
+        function handleFatalError(error) {
+            console.error('Error fatal:', error);
+            updateStatus(`❌ FALLA CRÍTICA: ${error.message}`, 'error');
+            alert(`Error grave: ${error.message}\nVerifica la consola para detalles.`);
+        }
+
         function switchCamera() {
             isFrontCamera = !isFrontCamera;
             startCamera();
         }
 
-        // Exportar a Excel
         function exportToExcel() {
-            const worksheet = XLSX.utils.json_to_sheet(registros);
+            const worksheet = XLSX.utils.json_to_sheet(registros.map(reg => ({
+                Estudiante: reg.nombre,
+                Fecha: reg.fecha,
+                Hora: reg.hora,
+                Timestamp: new Date(reg.timestamp).toISOString()
+            })));
+            
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "Asistencia");
-            XLSX.writeFile(workbook, `Asistencia_${new Date().toISOString().split('T')[0]}.xlsx`);
+            XLSX.writeFile(workbook, `Asistencia_${new Date().toISOString().slice(0,10)}.xlsx`);
         }
 
-        // Iniciar aplicación
+        // INICIAR SISTEMA
         initialize();
     </script>
 </body>
