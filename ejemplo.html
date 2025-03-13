@@ -153,64 +153,64 @@
     </div>
 
     <script>
+        // Configuración principal
         const CONFIG = {
             detectionInterval: 1000,
             similarityThreshold: 0.45,
             cooldownTime: 15000,
             modelsURL: 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/',
-    studentImages: [
-        'https://github.com/JOELpineda3312/Informacion/blob/610d8044553eadc03f971fd41d42ffa6795717f2/joel.jpg?',  // Imagen 1
-        'https://raw.githubusercontent.com/JOELpineda3312/Informacion/refs/heads/main/Joel%20Pineda.jpg'  // Imagen 2
-    ]
-};
+            studentImages: [
+                'https://raw.githubusercontent.com/JOELpineda3312/Informacion/610d8044553eadc03f971fd41d42ffa6795717f2/joel.jpg',
+                'https://raw.githubusercontent.com/JOELpineda3312/Informacion/main/Joel%20Pineda.jpg'
+            ],
+            detectionOptions: new faceapi.TinyFaceDetectorOptions({
+                inputSize: 512,
+                scoreThreshold: 0.3
+            })
+        };
 
-// Función para extraer nombres
-function extractNameFromUrl(url) {
-    const fileName = url.split('/').pop().split('?')[0]; // Ej: "Joel%20Pineda.jpg"
-    return fileName
-        .split('.')[0]      // Remover extensión
-        .replace(/%20/g, ' ') // Convertir %20 en espacios
-        .replace(/_/g, ' ');  // Opcional: convertir _ en espacios
-}
-
+        // Variables globales
         let currentStream = null;
         let isFrontCamera = true;
         let registros = JSON.parse(localStorage.getItem('asistencia')) || [];
         let faceMatcher = null;
         const lastDetections = new Map();
 
+        // Inicialización del sistema
         async function initialize() {
             try {
                 await loadFaceModels();
                 await loadReferenceFaces();
                 await startCamera();
                 setupFaceDetection();
-                updateStatus('Sistema listo');
+                updateStatus('Sistema listo ✅');
             } catch (error) {
-                updateStatus(`Error: ${error.message}`, 'error');
+                updateStatus(`❌ Error: ${error.message}`, 'error');
             }
         }
 
+        // Carga de modelos de IA
         async function loadFaceModels() {
-            updateStatus('Cargando modelos de IA...');
+            updateStatus('🔃 Cargando modelos de reconocimiento...');
             await faceapi.nets.tinyFaceDetector.loadFromUri(CONFIG.modelsURL);
             await faceapi.nets.faceLandmark68Net.loadFromUri(CONFIG.modelsURL);
             await faceapi.nets.faceRecognitionNet.loadFromUri(CONFIG.modelsURL);
         }
 
+        // Carga de imágenes de referencia
         async function loadReferenceFaces() {
-            updateStatus('Cargando estudiantes...');
+            updateStatus('🔃 Cargando base de datos...');
             const labeledDescriptors = [];
             
             for (const url of CONFIG.studentImages) {
                 try {
                     const img = await loadImage(url);
-                    const detections = await faceapi.detectAllFaces(img)
+                    const detections = await faceapi.detectAllFaces(img, CONFIG.detectionOptions)
                         .withFaceLandmarks()
                         .withFaceDescriptors();
 
                     if (detections.length === 0) {
-                        console.error(`No se detectó rostro en: ${url}`);
+                        console.warn(`⚠️ No se detectaron rostros en: ${url}`);
                         continue;
                     }
 
@@ -220,28 +220,48 @@ function extractNameFromUrl(url) {
                             new faceapi.LabeledFaceDescriptors(studentName, [detection.descriptor])
                         );
                     });
+                    
                 } catch (error) {
-                    console.error(`Error cargando imagen: ${url}`, error);
+                    console.error(`❌ Error con imagen ${url}:`, error);
+                    updateStatus(`⚠️ Problema con: ${extractNameFromUrl(url)}`, 'error');
                 }
             }
 
             if (labeledDescriptors.length === 0) {
-                throw new Error('No se encontraron rostros válidos en las imágenes de referencia');
+                throw new Error('No se encontraron rostros válidos. Verifica las imágenes');
             }
             
             faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, CONFIG.similarityThreshold);
         }
 
-        function extractNameFromUrl(url) {
-            const fileName = url.split('/').pop().split('?')[0];
-            return fileName.split('.')[0].toUpperCase();
+        // Función para cargar imágenes con proxy CORS
+        function loadImage(url) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = "Anonymous";
+                
+                // Usar proxy para evitar CORS
+                const proxyUrl = 'https://corsproxy.io/?';
+                img.src = proxyUrl + encodeURIComponent(url);
+                
+                img.onload = () => resolve(img);
+                img.onerror = () => reject(new Error('Error cargando imagen'));
+            });
         }
 
-        async function startCamera() {
-            if (currentStream) {
-                currentStream.getTracks().forEach(track => track.stop());
-            }
+        // Extraer nombre del archivo
+        function extractNameFromUrl(url) {
+            const fileName = url.split('/').pop().split('?')[0];
+            return decodeURIComponent(fileName)
+                .split('.')[0]
+                .replace(/_/g, ' ')
+                .trim();
+        }
 
+        // Configuración de cámara
+        async function startCamera() {
+            if (currentStream) currentStream.getTracks().forEach(track => track.stop());
+            
             const constraints = {
                 video: {
                     facingMode: { exact: isFrontCamera ? 'user' : 'environment' },
@@ -258,6 +278,7 @@ function extractNameFromUrl(url) {
             }
         }
 
+        // Detección facial en tiempo real
         function setupFaceDetection() {
             const video = document.getElementById('video');
             const canvas = document.getElementById('canvas');
@@ -267,8 +288,7 @@ function extractNameFromUrl(url) {
                 faceapi.matchDimensions(canvas, displaySize);
 
                 setInterval(async () => {
-                    const detections = await faceapi.detectAllFaces(video, 
-                        new faceapi.TinyFaceDetectorOptions())
+                    const detections = await faceapi.detectAllFaces(video, CONFIG.detectionOptions)
                         .withFaceLandmarks()
                         .withFaceDescriptors();
 
@@ -287,16 +307,7 @@ function extractNameFromUrl(url) {
             });
         }
 
-        function loadImage(url) {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.crossOrigin = "Anonymous";
-                img.onload = () => resolve(img);
-                img.onerror = (e) => reject(new Error('Error cargando imagen'));
-                img.src = url;
-            });
-        }
-
+        // Dibujar cuadro de detección
         function drawDetectionBox(canvas, detection, label) {
             const ctx = canvas.getContext('2d');
             const { x, y, width, height } = detection.detection.box;
@@ -310,14 +321,15 @@ function extractNameFromUrl(url) {
             ctx.fillText(label, x + 5, y > 20 ? y - 5 : 20);
         }
 
+        // Registrar asistencia
         function registerAttendance(name) {
             const now = Date.now();
             const today = new Date().toISOString().split('T')[0];
             
-            if (lastDetections.get(name) && (now - lastDetections.get(name)) < CONFIG.cooldownTime) {
-                return;
-            }
+            // Verificar cooldown
+            if (lastDetections.get(name) && (now - lastDetections.get(name)) < CONFIG.cooldownTime) return;
 
+            // Verificar duplicados
             const exists = registros.some(reg => 
                 reg.nombre === name && 
                 reg.fecha === today &&
@@ -338,9 +350,11 @@ function extractNameFromUrl(url) {
                 lastDetections.set(name, now);
                 localStorage.setItem('asistencia', JSON.stringify(registros));
                 updateRegistryTable();
+                updateStatus(`✔️ Asistencia registrada: ${name}`, 'success');
             }
         }
 
+        // Actualizar tabla de registros
         function updateRegistryTable() {
             const tbody = document.getElementById('registrosBody');
             tbody.innerHTML = registros
@@ -354,26 +368,30 @@ function extractNameFromUrl(url) {
                 `).join('');
         }
 
+        // Actualizar estado del sistema
         function updateStatus(message, type = 'info') {
             const status = document.getElementById('status');
             status.textContent = message;
-            status.style.background = type === 'error' ? '#ff000033' : '#00ff0033';
+            status.style.background = type === 'error' ? '#ff000033' : 
+                                    type === 'success' ? '#00ff0033' : 
+                                    'rgba(255,255,255,0.05)';
         }
 
+        // Cambiar cámara
         function switchCamera() {
             isFrontCamera = !isFrontCamera;
             startCamera();
         }
 
+        // Exportar a Excel
         function exportToExcel() {
             const worksheet = XLSX.utils.json_to_sheet(registros);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "Asistencia");
-            
             XLSX.writeFile(workbook, `Asistencia_${new Date().toISOString().split('T')[0]}.xlsx`);
         }
 
-        // Iniciar
+        // Iniciar aplicación
         initialize();
     </script>
 </body>
