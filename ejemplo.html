@@ -158,10 +158,20 @@
             similarityThreshold: 0.45,
             cooldownTime: 15000,
             modelsURL: 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/',
-            studentImages: [
-                'https://raw.githubusercontent.com/JOELpineda3312/Informacion/610d8044553eadc03f971fd41d42ffa6795717f2/joel.jpg'
-            ]
-        };
+    studentImages: [
+        'https://github.com/JOELpineda3312/Informacion/blob/610d8044553eadc03f971fd41d42ffa6795717f2/joel.jpg?',  // Imagen 1
+        'https://raw.githubusercontent.com/JOELpineda3312/Informacion/refs/heads/main/Joel%20Pineda.jpg'  // Imagen 2
+    ]
+};
+
+// Función para extraer nombres
+function extractNameFromUrl(url) {
+    const fileName = url.split('/').pop().split('?')[0]; // Ej: "Joel%20Pineda.jpg"
+    return fileName
+        .split('.')[0]      // Remover extensión
+        .replace(/%20/g, ' ') // Convertir %20 en espacios
+        .replace(/_/g, ' ');  // Opcional: convertir _ en espacios
+}
 
         let currentStream = null;
         let isFrontCamera = true;
