@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Asistencia Facial Inteligente</title>
+    <title>Sistema de Asistencia Facial</title>
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
     <style>
         :root {
             --primary: #2196F3;
@@ -31,13 +32,6 @@
         .container {
             max-width: 1200px;
             margin: 0 auto;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 2rem;
-            padding: 1rem;
-            border-bottom: 2px solid var(--primary);
         }
 
         .camera-wrapper {
@@ -84,10 +78,6 @@
             cursor: pointer;
             backdrop-filter: blur(10px);
             transition: all 0.3s;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
         }
 
         .btn:hover {
@@ -121,58 +111,28 @@
             border-radius: 8px;
             margin: 1rem 0;
             background: rgba(255,255,255,0.05);
-            transition: all 0.3s;
-        }
-
-        .status.success {
-            background: var(--success);
-        }
-
-        .status.error {
-            background: var(--error);
         }
 
         @media (max-width: 768px) {
             .camera-wrapper {
                 margin: 1rem auto;
-                border-radius: 8px;
             }
-
+            
             .btn {
                 padding: 10px 18px;
-                font-size: 12px;
-            }
-
-            th, td {
-                padding: 10px 12px;
                 font-size: 14px;
-            }
-
-            .registros-container {
-                padding: 15px;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>Registro de Asistencia Automático</h1>
-            <p>Sistema de reconocimiento facial con soporte móvil</p>
-        </div>
-
         <div class="camera-wrapper">
             <video id="video" autoplay playsinline></video>
             <canvas id="canvas"></canvas>
             <div class="controls">
-                <button class="btn" onclick="switchCamera()">
-                    <span class="material-icons">&#xe42f;</span>
-                    Cambiar Cámara
-                </button>
-                <button class="btn" onclick="exportToCSV()">
-                    <span class="material-icons">&#xe2c4;</span>
-                    Descargar
-                </button>
+                <button class="btn" onclick="switchCamera()">Cambiar Cámara</button>
+                <button class="btn" onclick="exportToExcel()">Descargar Excel</button>
             </div>
         </div>
 
@@ -193,74 +153,80 @@
     </div>
 
     <script>
-        // Configuración del sistema
         const CONFIG = {
-            detectionInterval: 500,
-            similarityThreshold: 0.6,
-            cooldownTime: 10000, // 10 segundos
+            detectionInterval: 1000,
+            similarityThreshold: 0.5,
+            cooldownTime: 15000,
             modelsURL: 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/',
-            driveImages: [
+            studentImages: [
                 'https://github.com/JOELpineda3312/Informacion/blob/610d8044553eadc03f971fd41d42ffa6795717f2/joel.jpg?raw=true'
             ]
         };
 
-        // Variables globales
         let currentStream = null;
         let isFrontCamera = true;
         let registros = JSON.parse(localStorage.getItem('asistencia')) || [];
         let faceMatcher = null;
         const lastDetections = new Map();
 
-        // Inicialización del sistema
         async function initialize() {
             try {
                 await loadFaceModels();
                 await loadReferenceFaces();
                 await startCamera();
                 setupFaceDetection();
-                updateStatus('Sistema listo', 'success');
-                updateRegistryTable();
+                updateStatus('Sistema listo');
             } catch (error) {
                 updateStatus(`Error: ${error.message}`, 'error');
-                console.error(error);
             }
         }
 
-        // Cargar modelos de IA
         async function loadFaceModels() {
-            updateStatus('Cargando modelos de reconocimiento...');
+            updateStatus('Cargando modelos de IA...');
             await faceapi.nets.tinyFaceDetector.loadFromUri(CONFIG.modelsURL);
             await faceapi.nets.faceLandmark68Net.loadFromUri(CONFIG.modelsURL);
             await faceapi.nets.faceRecognitionNet.loadFromUri(CONFIG.modelsURL);
         }
 
-        // Cargar rostros de referencia desde Drive
         async function loadReferenceFaces() {
-            updateStatus('Cargando base de datos...');
+            updateStatus('Cargando estudiantes...');
             const labeledDescriptors = [];
             
-            for (const url of CONFIG.driveImages) {
+            for (const url of CONFIG.studentImages) {
                 try {
                     const img = await loadImage(url);
                     const detections = await faceapi.detectAllFaces(img)
                         .withFaceLandmarks()
                         .withFaceDescriptors();
-                    
+
+                    if (detections.length === 0) {
+                        console.error(`No se detectó rostro en: ${url}`);
+                        continue;
+                    }
+
+                    const studentName = extractNameFromUrl(url);
                     detections.forEach(detection => {
-                        const name = extractNameFromUrl(url);
                         labeledDescriptors.push(
-                            new faceapi.LabeledFaceDescriptors(name, [detection.descriptor])
+                            new faceapi.LabeledFaceDescriptors(studentName, [detection.descriptor])
                         );
                     });
                 } catch (error) {
                     console.error(`Error cargando imagen: ${url}`, error);
                 }
             }
+
+            if (labeledDescriptors.length === 0) {
+                throw new Error('No se encontraron rostros válidos en las imágenes de referencia');
+            }
             
             faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, CONFIG.similarityThreshold);
         }
 
-        // Manejo de la cámara
+        function extractNameFromUrl(url) {
+            const fileName = url.split('/').pop().split('?')[0];
+            return fileName.split('.')[0].toUpperCase();
+        }
+
         async function startCamera() {
             if (currentStream) {
                 currentStream.getTracks().forEach(track => track.stop());
@@ -282,7 +248,6 @@
             }
         }
 
-        // Configurar detección facial
         function setupFaceDetection() {
             const video = document.getElementById('video');
             const canvas = document.getElementById('canvas');
@@ -312,33 +277,25 @@
             });
         }
 
-        // Funciones auxiliares
         function loadImage(url) {
             return new Promise((resolve, reject) => {
                 const img = new Image();
                 img.crossOrigin = "Anonymous";
                 img.onload = () => resolve(img);
-                img.onerror = () => reject(new Error('Error cargando imagen'));
-                
-                const fileId = url.match(/id=([^&]+)/)?.[1];
-                img.src = `https://drive.google.com/uc?id=${fileId}`;
+                img.onerror = (e) => reject(new Error('Error cargando imagen'));
+                img.src = url;
             });
-        }
-
-        function extractNameFromUrl(url) {
-            const params = new URL(url).searchParams;
-            return params.get('name') || 'Estudiante';
         }
 
         function drawDetectionBox(canvas, detection, label) {
             const ctx = canvas.getContext('2d');
             const { x, y, width, height } = detection.detection.box;
             
-            ctx.strokeStyle = '#FF0000';
+            ctx.strokeStyle = '#00FF00';
             ctx.lineWidth = 2;
             ctx.strokeRect(x, y, width, height);
             
-            ctx.fillStyle = '#FF0000';
+            ctx.fillStyle = '#00FF00';
             ctx.font = '14px Arial';
             ctx.fillText(label, x + 5, y > 20 ? y - 5 : 20);
         }
@@ -347,12 +304,10 @@
             const now = Date.now();
             const today = new Date().toISOString().split('T')[0];
             
-            // Verificar cooldown
             if (lastDetections.get(name) && (now - lastDetections.get(name)) < CONFIG.cooldownTime) {
                 return;
             }
 
-            // Verificar duplicados
             const exists = registros.some(reg => 
                 reg.nombre === name && 
                 reg.fecha === today &&
@@ -373,7 +328,6 @@
                 lastDetections.set(name, now);
                 localStorage.setItem('asistencia', JSON.stringify(registros));
                 updateRegistryTable();
-                updateStatus(`Asistencia registrada: ${name}`, 'success');
             }
         }
 
@@ -393,7 +347,7 @@
         function updateStatus(message, type = 'info') {
             const status = document.getElementById('status');
             status.textContent = message;
-            status.className = `status ${type === 'error' ? 'error' : type === 'success' ? 'success' : ''}`;
+            status.style.background = type === 'error' ? '#ff000033' : '#00ff0033';
         }
 
         function switchCamera() {
@@ -401,22 +355,15 @@
             startCamera();
         }
 
-        function exportToCSV() {
-            const csvContent = [
-                ['Nombre', 'Fecha', 'Hora'],
-                ...registros.map(reg => [reg.nombre, reg.fecha, reg.hora])
-            ].map(row => row.join(',')).join('\n');
-
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `asistencia_${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
-            URL.revokeObjectURL(url);
+        function exportToExcel() {
+            const worksheet = XLSX.utils.json_to_sheet(registros);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Asistencia");
+            
+            XLSX.writeFile(workbook, `Asistencia_${new Date().toISOString().split('T')[0]}.xlsx`);
         }
 
-        // Iniciar aplicación
+        // Iniciar
         initialize();
     </script>
 </body>
