@@ -484,29 +484,6 @@
             document.getElementById('age').textContent = calcularEdad('20/07/2003');
         });
 
-        // Efecto parallax en tarjeta
-        document.addEventListener('mousemove', (e) => {
-            const card = document.querySelector('.profile-card');
-            const xAxis = (window.innerWidth / 2 - e.pageX) / 50;
-            const yAxis = (window.innerHeight / 2 - e.pageY) / 50;
-            
-            if(card) {
-                card.style.transform = `
-                    perspective(1000px)
-                    rotateY(${xAxis}deg)
-                    rotateX(${yAxis}deg)
-                    scale(1.02)
-                `;
-            }
-        });
-
-        // Restablecer posición al salir
-        document.addEventListener('mouseleave', () => {
-            const card = document.querySelector('.profile-card');
-            if(card) {
-                card.style.transform = 'perspective(1000px) rotateY(0deg) rotateX(0deg)';
-            }
-        });
     </script>
 </body>
 </html>
