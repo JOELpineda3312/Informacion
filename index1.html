@@ -6,14 +6,13 @@
     <meta name="description" content="Portafolio profesional de Joel Steven Pineda Rincon - Especialista en Calidad y UI/UX">
     <meta name="keywords" content="ingeniería de sistemas, UI/UX, desarrollo frontend, control de calidad">
     <meta name="author" content="Joel Steven Pineda Rincon">
-    
     <title>Joel Pineda | Ingeniero de Sistemas</title>
-    
-    <!-- Optimización de fuentes y recursos -->
+
+    <!-- Fuentes -->
     <link rel="preload" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;700&display=swap" as="style">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;700&display=swap">
-    
-    <!-- Estilos profesionales con animaciones avanzadas -->
+    <link rel="icon" href="https://github.com/JOELpineda3312/Informacion/blob/main/joel.jpg?raw=true" type="image">
+
     <style>
         :root {
             --primary: #6366f1;
@@ -21,10 +20,20 @@
             --accent: #818cf8;
             --dark: #1e1b4b;
             --light: #f8fafc;
+            --bg: #ffffff;
+            --text: #1e1b4b;
             --gradient: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
             --radius: 1.25rem;
             --shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
             --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .dark-theme {
+            --dark: #f8fafc;
+            --light: #1e1b4b;
+            --bg: #0f172a;
+            --text: #f8fafc;
+            --shadow: 0 25px 50px -12px rgba(255, 255, 255, 0.1);
         }
 
         * {
@@ -35,37 +44,68 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            background: var(--light);
-            color: var(--dark);
+            background: var(--bg);
+            color: var(--text);
             line-height: 1.6;
             min-height: 100vh;
             overflow-x: hidden;
+            transition: background 0.3s, color 0.3s;
         }
 
-        /* Animación de fondo dinámico */
-        .background-pattern {
+        /* Sistema de partículas */
+        #particle-canvas {
             position: fixed;
-            width: 100vw;
-            height: 100vh;
-            background: 
-                radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 90% 80%, rgba(79, 70, 229, 0.1) 0%, transparent 50%);
-            animation: float 20s infinite alternate;
-            z-index: -1;
+            top: 0;
+            left: 0;
+            z-index: 0;
+            pointer-events: none;
         }
 
-        @keyframes float {
-            0% { transform: translate(0, 0) scale(1); }
-            100% { transform: translate(-50px, 50px) scale(1.05); }
-        }
-
+        /* Contenido principal */
         .container {
+            position: relative;
+            z-index: 2;
             max-width: 1200px;
             margin: 0 auto;
             padding: 2rem;
         }
 
-        /* Tarjeta principal con efecto 3D */
+        /* Botón tema oscuro */
+        .theme-toggle {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            background: var(--gradient);
+            border: none;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1) rotate(180deg);
+        }
+
+        .theme-toggle svg {
+            width: 1.2rem;
+            height: 1.2rem;
+            color: white;
+            transition: opacity 0.3s;
+        }
+
+        .sun-icon { opacity: 1; }
+        .moon-icon { opacity: 0; }
+        .dark-theme .sun-icon { opacity: 0; }
+        .dark-theme .moon-icon { opacity: 1; }
+
+        /* Tarjeta de perfil */
         .profile-card {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(20px);
@@ -73,31 +113,13 @@
             box-shadow: var(--shadow);
             padding: 2.5rem;
             margin: 2rem 0;
-            transform-style: preserve-3d;
-            transition: var(--transition);
             position: relative;
-            overflow: hidden;
         }
 
-        .profile-card::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: var(--gradient);
-            opacity: 0.1;
-            transform: rotate(45deg);
-            animation: rotate 20s linear infinite;
+        .dark-theme .profile-card {
+            background: rgba(30, 27, 75, 0.95);
         }
 
-        @keyframes rotate {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Header con efecto parallax */
         .profile-header {
             text-align: center;
             margin-bottom: 2.5rem;
@@ -118,11 +140,6 @@
             transform: translateZ(50px);
         }
 
-        .profile-image:hover {
-            transform: translateZ(50px) scale(1.05);
-            box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.2);
-        }
-
         .profile-title {
             font-family: 'Space Grotesk', sans-serif;
             font-size: 2.5rem;
@@ -132,16 +149,13 @@
             background-clip: text;
             color: transparent;
             margin-bottom: 0.5rem;
-            letter-spacing: -0.05em;
         }
 
-        /* Sistema de tarjetas modulares */
+        /* Sistema de tarjetas */
         .info-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 1.5rem;
-            position: relative;
-            z-index: 2;
         }
 
         .info-card {
@@ -150,13 +164,12 @@
             border-radius: calc(var(--radius) - 0.5rem);
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
             transition: var(--transition);
-            transform: translateZ(30px);
             border: 1px solid rgba(0, 0, 0, 0.05);
         }
 
-        .info-card:hover {
-            transform: translateZ(40px);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        .dark-theme .info-card {
+            background: rgba(30, 27, 75, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .info-header {
@@ -191,13 +204,13 @@
         }
 
         .info-value {
-            color: var(--dark);
+            color: var(--text);
             font-size: 0.95rem;
             line-height: 1.5;
         }
 
         .info-value a {
-            color: var(--dark);
+            color: var(--text);
             text-decoration: none;
             transition: color 0.2s;
             display: inline-flex;
@@ -212,17 +225,6 @@
             background: rgba(99, 102, 241, 0.1);
         }
 
-        /* Efectos de interacción avanzados */
-        .floating {
-            animation: float 6s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-20px); }
-        }
-
-        /* Responsive Design */
         @media (max-width: 768px) {
             .container {
                 padding: 1rem;
@@ -240,6 +242,13 @@
                 width: 140px;
                 height: 140px;
             }
+
+            .theme-toggle {
+                top: 1rem;
+                right: 1rem;
+                width: 2rem;
+                height: 2rem;
+            }
         }
 
         @media (max-width: 480px) {
@@ -254,22 +263,29 @@
     </style>
 </head>
 <body>
-    <div class="background-pattern"></div>
-    
+    <button class="theme-toggle">
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707"/>
+        </svg>
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+        </svg>
+    </button>
+
+    <canvas id="particle-canvas"></canvas>
+
     <main class="container">
         <article class="profile-card">
             <header class="profile-header">
                 <img src="https://github.com/JOELpineda3312/Informacion/blob/main/joel.jpg?raw=true" 
-                     alt="Joel Pineda - Ingeniero de Sistemas"
-                     class="profile-image floating"
-                     loading="lazy">
+                     alt="Joel Pineda"
+                     class="profile-image">
                 <h1 class="profile-title">Joel Steven Pineda Rincon</h1>
                 <p class="info-value">Asegurador de Calidad</p>
             </header>
 
             <section class="info-grid">
-                
-                <!-- Información Básica -->
+                <!-- Información Personal -->
                 <div class="info-card">
                     <div class="info-header">
                         <div class="info-icon">
@@ -282,12 +298,11 @@
                     <div class="info-value">
                         <div><strong>Nombre completo:</strong> Joel Steven Pineda Rincon</div>
                         <div><strong>Edad:</strong> <span id="age">20 años</span></div>
-                        <div><strong>F. Nacimiento:</strong> 20/07/2003</div>
-                        <div><strong>T. Documento:</strong> Cedula Ciudadania</div>
-                        <div><strong>Documento:</strong>  1'192.757.557</div>
-                        <div><strong>Pais :</strong> Colombia</div>
-                        <div><strong>Ciudad :</strong> Cúcuta</div>
-                        <div><strong>Tipo sangre:</strong> A+</div>
+                        <div><strong>Fecha de Nacimiento:</strong> 20/07/2003</div>
+                        <div><strong>Documento:</strong> 1'192.757.557</div>
+                        <div><strong>País:</strong> Colombia</div>
+                        <div><strong>Ciudad:</strong> Cúcuta</div>
+                        <div><strong>Tipo de sangre:</strong> A+</div>
                     </div>
                 </div>
 
@@ -368,7 +383,7 @@
                    <div class="info-header">
                        <div class="info-icon">
                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                            </svg>
                        </div>
                        <h2 class="info-label">Habilidades Técn.</h2>
@@ -489,8 +504,123 @@
         </article>
     </main>
 
+
     <script>
-        // Cálculo dinámico de edad
+        // Sistema de partículas
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+
+        const colorPalettes = {
+            light: ['#6366f1', '#4f46e5', '#818cf8', '#a5b4fc', '#c7d2fe'],
+            dark: ['#ffd700', '#ffaa00', '#ff6b6b', '#94ff9d', '#99e6ff']
+        };
+
+        class Particle {
+            constructor(x, y, theme) {
+                this.x = x;
+                this.y = y;
+                this.size = Math.random() * 3 + 1;
+                this.speedX = (Math.random() - 0.5) * 0.5;
+                this.speedY = (Math.random() - 0.5) * 0.5;
+                this.color = colorPalettes[theme][Math.floor(Math.random() * 5)];
+                this.alpha = 1;
+            }
+
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.alpha -= 0.008;
+                this.size *= 0.995;
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = this.alpha;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        let particles = [];
+        let mouseX = 0;
+        let mouseY = 0;
+        let currentTheme = document.body.classList.contains('dark-theme') ? 'dark' : 'light';
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            
+            particles.forEach((particle, index) => {
+                particle.update();
+                particle.draw();
+                
+                if (particle.alpha <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        window.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            
+            for (let i = 0; i < 8; i++) {
+                particles.push(new Particle(
+                    mouseX + (Math.random() - 0.5) * 30,
+                    mouseY + (Math.random() - 0.5) * 30,
+                    currentTheme
+                ));
+            }
+        });
+
+        // Animación 3D para tarjetas
+        document.querySelectorAll('.info-card').forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                card.style.transform = `
+                    translateZ(40px)
+                    rotateX(${(y - rect.height/2) / 10}deg)
+                    rotateY(${-(x - rect.width/2) / 10}deg)
+                `;
+            });
+            
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'translateZ(30px)';
+            });
+        });
+
+        // Control del tema
+        document.querySelector('.theme-toggle').addEventListener('click', () => {
+            document.body.classList.toggle('dark-theme');
+            currentTheme = document.body.classList.contains('dark-theme') ? 'dark' : 'light';
+            localStorage.setItem('theme', document.body.classList.contains('dark-theme') ? 'dark-theme' : '');
+            
+            particles.forEach(p => {
+                p.color = colorPalettes[currentTheme][Math.floor(Math.random() * 5)];
+            });
+        });
+
+        // Cargar tema guardado
+        if (localStorage.getItem('theme') === 'dark-theme') {
+            document.body.classList.add('dark-theme');
+        }
+
+        // Responsive
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        });
+
+        animate();
+
+        // Cálculo de edad
         function calcularEdad(fecha) {
             const hoy = new Date();
             const nacimiento = new Date(fecha.split('/').reverse().join('-'));
@@ -503,11 +633,7 @@
             return `${edad} años`;
         }
 
-        // Actualizar datos dinámicos
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('age').textContent = calcularEdad('20/07/2003');
-        });
-
+        document.getElementById('age').textContent = calcularEdad('20/07/2003');
     </script>
 </body>
 </html>
