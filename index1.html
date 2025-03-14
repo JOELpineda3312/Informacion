@@ -487,8 +487,8 @@
         // Efecto parallax en tarjeta
         document.addEventListener('mousemove', (e) => {
             const card = document.querySelector('.profile-card');
-            const xAxis = (window.innerWidth / 2 - e.pageX) / 25;
-            const yAxis = (window.innerHeight / 2 - e.pageY) / 25;
+            const xAxis = (window.innerWidth / 2 - e.pageX) / 50;
+            const yAxis = (window.innerHeight / 2 - e.pageY) / 50;
             
             if(card) {
                 card.style.transform = `
